@@ -1,5 +1,5 @@
 
-import {join_success, income_change, outcome_change, order} from '../api/api'
+import {join_success, income_change, outcome_change, order, transaction_seller, transaction_buyer, transaction_active, transaction_coin} from '../api/api'
 import { user_url } from '../store/Allurl'
 import React, { useContext, useReducer, useEffect, useState } from 'react'
 import Store from '../store/context'
@@ -102,21 +102,21 @@ const index = ()=>{
         dispatch({ type: 'outcome', payload: Number(state.account)-Number(outcome)})
     }
 
-    //주문
+    //주문-매수 거래
 
-    const [sell, setsell] = useState('')
-    const [buy, setbuy] = useState('')
-    const [buy_unit_send, buy_unit_handle] = useState('')
+    const [cash, setcash] = useState('')
+    const [coin, setcoin] = useState('')
+    const [coin_unit, coin_unit_handle] = useState('')
     const [ordertype, setordertype] = useState('.')
 
-    const buy_amount = (e) => {
-        setbuy(e.target.value)
+    const cash_amount = (e) => {
+        setcash(e.target.value)
     }
-    const buy_unit = (e) => {
-        buy_unit_handle(e.target.value)
+    const coin_amount = (e) => {
+        setcoin(e.target.value)
     }
-    const sell_amount = (e) => {
-        setsell(e.target.value)
+    const coin_unit_send = (e) => {
+        coin_unit_handle(e.target.value)
     }
     const ordertype_handle = (e) => {
         setordertype(e.target.value)
@@ -124,15 +124,43 @@ const index = ()=>{
     const orderSubmit = async (e) => {
         e.preventDefault()
 
-        order({userid:state.userid, sell:sell, sell_unit_send:'KRW', buy:buy, buy_unit_send:buy_unit_send, ordertype:ordertype})
+        //주문할 때
+        order({userid:state.userid, coin:coin, coin_unit_send:coin_unit, cash:cash, cash_unit_send:'KRW', ordertype:ordertype})
         
+        //각자 지갑에서 거래 처리를 한다
         const options = {
             method:'GET'
         }
     
-        const response = await fetch(`${user_url}/transaction?sell=${sell}&ordertype=${ordertype}`,options) //restful api 
-        let result = await response.json()
+        const response = await fetch(`${user_url}/transaction_find?cash=${cash}&ordertype=${ordertype}`,options) //restful api 
+        const result = await response.json()
         console.log(result)
+    
+        const response_userid = await fetch(`${user_url}/transaction_find_userid?userid=${result[0].userid}`,options) //restful api 
+        let result_userid = await response_userid.json()
+        console.log(result_userid[0].userid)
+        console.log(result_userid[0].account)
+
+        if(coin > result[0].coin){
+            transaction_buyer({userid:state.userid, account:state.account, cash:result[0].cash, wallet:state.wallet, coin:result[0].coin})
+            transaction_seller({userid:result_userid[0].userid, account:result_userid[0].account, cash:result[0].cash, wallet:result_userid[0].wallet, coin:result[0].coin})            
+            transaction_active({userid:response_userid[0].userid})
+            transaction_coin({userid:state.userid, now:result[result.length-1].coin, coin:result[0].coin })
+        } else {
+            transaction_buyer({userid:state.userid, account:state.account, cash:result[0].cash, wallet:state.wallet, coin:coin})
+            transaction_seller({userid:result_userid[0].userid, account:result_userid[0].account, cash:result[0].cash, wallet:result_userid[0].wallet, coin:coin})            
+            transaction_active({userid:state.userid})
+            transaction_coin({userid:result[0].userid, now:result[0].coin, coin:coin})
+        } 
+        
+        //     transaction_buyer({userid:state.userid, account:state.account, cash:result[0].cash, wallet:state.wallet, coin:coin})
+        //     transaction_seller({userid:result_userid[0].userid, account:result_userid[0].account, cash:result[0].cash, wallet:result_userid[0].wallet, coin:coin})            
+        //     transaction_active({userid:state.userid})
+        //     transaction_active({userid:response_userid[0].userid})
+        // }
+
+        //주문서 처리를 한다.
+
 
     }
 
@@ -148,9 +176,9 @@ const index = ()=>{
     
         const response = await fetch(`${user_url}/orderlist`,options) //restful api 
         let result = await response.json()
-        console.log(result[0].sell)
         setorderlist(JSON.stringify(result))
     }
+
     return (
         <>
             <div>
@@ -194,8 +222,8 @@ const index = ()=>{
                     </form>  
                     <h2><select onChange = {ordertype_handle}><option value = "">매수/매도</option><option value = "0">매수</option><option value = "1">매도</option></select></h2> 
                     <form onSubmit = {orderSubmit}>
-                    <input onChange = {buy_amount} type = "text"/>KRW
-                    <br/><input onChange = {sell_amount} type = "text"/><select onChange = {buy_unit}><option>코인 선택</option><option value = "btc">btc</option><option value = "won">won</option><option value = "groot">groot</option></select>
+                    <input onChange = {cash_amount} type = "text"/>KRW
+                    <br/><input onChange = {coin_amount} type = "text"/><select onChange = {coin_unit_send}><option>코인 선택</option><option value = "btc">btc</option><option value = "won">won</option><option value = "groot">groot</option></select>
                     <br/><input type = "submit" value = "거래"/>
                     </form>  
                 </>

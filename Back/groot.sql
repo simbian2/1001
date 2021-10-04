@@ -23,10 +23,10 @@ CREATE TABLE `assert` (
 CREATE TABLE `order_table` (
   `pk` int(11) NOT NULL AUTO_INCREMENT,
   `userid` varchar(50) NOT NULL,
-  `sell` int(50) NOT NULL,
-  `sell_unit` varchar(10) NOT NULL,
-  `buy` float NOT NULL,
-  `buy_unit` varchar(10) NOT NULL,
+  `cash` int(50) NOT NULL,
+  `cash_unit` varchar(10) NOT NULL,
+  `coin` float NOT NULL,
+  `coin_unit` varchar(10) NOT NULL,
   `ordertype` int(50) NOT NULL,
   `active` int(150) NOT NULL,
   PRIMARY KEY (`pk`,`userid`)

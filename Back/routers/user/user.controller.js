@@ -128,13 +128,13 @@ let outcome_change = async (req, res, next) => {
 
 let order = async (req, res, next) => {
 
-    const {userid, sell, sell_unit_send, buy, buy_unit_send, ordertype} = req.body
+    const {userid, cash, cash_unit_send, coin, coin_unit_send, ordertype} = req.body
 
     pool.getConnection((err,connection)=>{
 
         if(err) throw err;
 
-        connection.query(`insert into order_table (userid, sell, sell_unit, buy, buy_unit, ordertype, active) values ('${userid}', '${sell}', '${sell_unit_send}', '${buy}', '${buy_unit_send}', '${ordertype}', 5)`, (error,results,fields)=>{
+        connection.query(`insert into order_table (userid, cash, cash_unit, coin, coin_unit, ordertype, active) values ('${userid}', '${cash}', '${cash_unit_send}', '${coin}', '${coin_unit_send}', '${ordertype}', 0)`, (error,results,fields)=>{
             if(error) throw error;
 
 
@@ -143,9 +143,9 @@ let order = async (req, res, next) => {
     });   
 }
 
-let transaction = async (req, res, next) => {
+let transaction_find = async (req, res, next) => {
 
-    const {sell, ordertype} = req.query
+    const {cash, ordertype} = req.query
 
     pool.getConnection((err,connection)=>{
 
@@ -153,13 +153,33 @@ let transaction = async (req, res, next) => {
 
 
     if(ordertype == 0) {
-        connection.query(`select * from order_table where ordertype = 1 and sell < ${sell}`, (error,results,fields)=>{
+        connection.query(`select * from order_table where ordertype = 1 and cash < ${cash} and active = 0 order by cash ASC`, (error,results,fields)=>{
             connection.release(); //반환하는 부분
             if(error) throw error;
             
-            res.json(results[0])
+            res.json(results)
         })            
+    } else {
+
     }
+    })
+}
+
+let transaction_find_userid = async (req, res, next) => {
+
+    const {userid} = req.query
+
+    pool.getConnection((err,connection)=>{
+
+        if(err) throw err;
+
+
+        connection.query(`select * from user where userid = '${userid}'`, (error,results,fields)=>{
+            connection.release(); //반환하는 부분
+            if(error) throw error;
+            
+            res.json(results)
+        })            
     })
 }
 
@@ -178,6 +198,78 @@ let orderlist = async (req, res, next) => {
 
     });   
 }
+
+let transaction_seller = async (req, res, next) => {
+
+    const {userid, account, cash, wallet, coin} = req.body
+
+    pool.getConnection((err,connection)=>{
+
+        if(err) throw err;
+
+        connection.query(`update user set account = ${Number(account)+Number(cash)}, wallet = ${Number(wallet)-Number(coin)} where userid = '${userid}'`, (error,results,fields)=>{
+            if(error) throw error;
+
+
+        })
+
+    }); 
+
+}
+
+let transaction_buyer = async (req, res, next) => {
+
+    const {userid, account, cash, wallet, coin} = req.body
+
+    pool.getConnection((err,connection)=>{
+
+        if(err) throw err;
+
+        connection.query(`update user set account = ${Number(account)-Number(cash)}, wallet = ${Number(wallet)+Number(coin)} where userid = '${userid}'`, (error,results,fields)=>{
+            if(error) throw error;
+
+
+        })
+
+    }); 
+
+}
+
+let transaction_active = async (req, res, next) => {
+
+    const {userid} = req.body
+
+    pool.getConnection((err,connection)=>{
+
+        if(err) throw err;
+
+        connection.query(`update order_table set active = 1 where userid = '${userid}'`, (error,results,fields)=>{
+            if(error) throw error;
+
+
+        })
+
+    }); 
+}
+
+let transaction_coin = async (req, res, next) => {
+
+    const {userid, now, coin} = req.body
+
+    pool.getConnection((err,connection)=>{
+
+        if(err) throw err;
+
+        connection.query(`update order_table set coin = ${Number(now)-Number(coin)} where userid = '${userid}' and coin = ${now}`, (error,results,fields)=>{
+            if(error) throw error;
+
+
+        })
+
+    });
+
+}
+
 module.exports = {
     join_success,
     login_check,
@@ -186,5 +278,10 @@ module.exports = {
     outcome_change,
     order,
     orderlist,
-    transaction
+    transaction_find,
+    transaction_find_userid,
+    transaction_seller,
+    transaction_buyer,
+    transaction_active,
+    transaction_coin
 }
